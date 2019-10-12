@@ -557,10 +557,14 @@ mod impl_kzg10 {
     use algebra::{AffineCurve, PairingEngine, ProjectiveCurve};
     impl<E: PairingEngine> SinglePCExt<E::Fr> for KZG10<E> {
         fn combine_commitments(comms: &[Self::Commitment], coeffs: &[E::Fr]) -> Self::Commitment {
-            let mut result = E::G1Projective::zero();
-            for (comm, coeff) in comms.iter().zip(coeffs) {
-                result += &comm.0.mul(*coeff);
-            }
+            use rayon::prelude::*;
+            let zero = E::G1Projective::zero();
+            let result = comms
+                .par_iter()
+                .zip(coeffs)
+                .with_min_len(3)
+                .map(|(comm, coeff)| comm.0.mul(*coeff))
+                .reduce(|| zero, |mut a, b| {a += &b; a});
             Commitment(result.into())
         }
     }
