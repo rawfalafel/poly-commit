@@ -562,8 +562,8 @@ mod impl_kzg10 {
             let result = comms
                 .par_iter()
                 .zip(coeffs)
-                .with_min_len(1)
-                .with_max_len(1)
+                .with_min_len(4)
+                .with_max_len(4)
                 .map(|(comm, coeff)| comm.0.mul(*coeff))
                 .reduce(|| zero, |mut a, b| {a += &b; a});
             Commitment(result.into())
