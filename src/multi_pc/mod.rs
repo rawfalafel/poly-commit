@@ -33,7 +33,7 @@ pub trait MultiPolynomialCommitment<F: Field> {
     /// The evaluation proof.
     type Proof: Clone;
     /// The error type for the scheme.
-    type Error: std::error::Error;
+    type Error: std::error::Error + Send + Sync;
 
     /// Constructs public parameters when given as input the maximum degree `degree`
     /// for the polynomial commitment scheme.

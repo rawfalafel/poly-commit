@@ -48,7 +48,7 @@ pub trait PCVerifierKey: Clone {
 
 /// Defines the minimal interface of commitments for any polynomial
 /// commitment scheme.
-pub trait PCCommitment: Clone + algebra::ToBytes {
+pub trait PCCommitment: Clone + algebra::ToBytes + Send + Sync {
     /// Outputs a non-hiding commitment to the zero polynomial.
     fn empty() -> Self;
 

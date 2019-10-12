@@ -447,6 +447,7 @@ where
         opening_challenge: F,
         rng: &mut R,
     ) -> Result<bool, Self::Error> {
+        use rayon::prelude::*;
         let commitments: BTreeMap<_, _> = commitments.into_iter().map(|c| (c.label(), c)).collect();
         let mut query_to_labels_map = BTreeMap::new();
 
@@ -457,51 +458,56 @@ where
         assert_eq!(proof.proofs.len(), query_to_labels_map.len());
 
         let max_degree = vk.max_degree();
+        let combined_c_q_e: Result<Vec<_>, Self::Error> = query_to_labels_map
+            .into_par_iter()
+            .map(|(query, labels)| {
+                let lc_time =
+                    start_timer!(|| format!("Randomly combining {} commitments", labels.len()));
+                let mut comms_to_combine = Vec::new();
+                let mut values_to_combine = Vec::new();
+                let mut randomizers = Vec::new();
+                let mut challenge_j = F::one();
+                for label in labels.into_iter() {
+                    let commitment = commitments.get(label).ok_or(Error::IncorrectQuerySet(
+                        "query set references commitment with incorrect label",
+                    ))?;
+                    let degree_bound = commitment.degree_bound();
+                    let commitment = commitment.commitment();
+                    assert_eq!(degree_bound.is_some(), commitment.shifted_comm.is_some());
+
+                    let v_i = values
+                        .get(&(label.clone(), *query))
+                        .ok_or(Error::IncorrectEvaluation("value does not exist"))?;
+
+                    comms_to_combine.push(commitment.comm.clone());
+                    values_to_combine.push(*v_i);
+                    randomizers.push(challenge_j);
+
+                    if let Some(degree_bound) = degree_bound {
+                        let challenge_j_1 = challenge_j * &opening_challenge;
+                        let shift = query.pow([(max_degree - degree_bound) as u64]);
+
+                        comms_to_combine.push(commitment.shifted_comm.as_ref().unwrap().clone());
+                        values_to_combine.push(shift * v_i);
+                        randomizers.push(challenge_j_1);
+                    }
+                    challenge_j *= &opening_challenge.square();
+                }
+                let v = values_to_combine
+                    .into_iter()
+                    .zip(&randomizers)
+                    .fold(F::zero(), |x, (v, r)| x + &(v * r));
+                let c = SinglePC::combine_commitments(&comms_to_combine, &randomizers);
+
+                end_timer!(lc_time);
+                Ok((c, *query, v))
+        }).collect();
         let mut combined_comms = Vec::new();
         let mut combined_queries = Vec::new();
         let mut combined_evals = Vec::new();
-        for (query, labels) in query_to_labels_map.into_iter() {
-            let lc_time =
-                start_timer!(|| format!("Randomly combining {} commitments", labels.len()));
-            let mut comms_to_combine = Vec::new();
-            let mut values_to_combine = Vec::new();
-            let mut randomizers = Vec::new();
-            let mut challenge_j = F::one();
-            for label in labels.into_iter() {
-                let commitment = commitments.get(label).ok_or(Error::IncorrectQuerySet(
-                    "query set references commitment with incorrect label",
-                ))?;
-                let degree_bound = commitment.degree_bound();
-                let commitment = commitment.commitment();
-                assert_eq!(degree_bound.is_some(), commitment.shifted_comm.is_some());
-
-                let v_i = values
-                    .get(&(label.clone(), *query))
-                    .ok_or(Error::IncorrectEvaluation("value does not exist"))?;
-
-                comms_to_combine.push(commitment.comm.clone());
-                values_to_combine.push(*v_i);
-                randomizers.push(challenge_j);
-
-                if let Some(degree_bound) = degree_bound {
-                    let challenge_j_1 = challenge_j * &opening_challenge;
-                    let shift = query.pow([(max_degree - degree_bound) as u64]);
-
-                    comms_to_combine.push(commitment.shifted_comm.as_ref().unwrap().clone());
-                    values_to_combine.push(shift * v_i);
-                    randomizers.push(challenge_j_1);
-                }
-                challenge_j *= &opening_challenge.square();
-            }
-            let v = values_to_combine
-                .into_iter()
-                .zip(&randomizers)
-                .fold(F::zero(), |x, (v, r)| x + &(v * r));
-            let c = SinglePC::combine_commitments(&comms_to_combine, &randomizers);
-
-            end_timer!(lc_time);
+        for (c, query, v) in combined_c_q_e? {
             combined_comms.push(c);
-            combined_queries.push(*query);
+            combined_queries.push(query);
             combined_evals.push(v);
         }
         let proof_time = start_timer!(|| "Checking SinglePC::Proof");
@@ -557,15 +563,12 @@ mod impl_kzg10 {
     use algebra::{AffineCurve, PairingEngine, ProjectiveCurve};
     impl<E: PairingEngine> SinglePCExt<E::Fr> for KZG10<E> {
         fn combine_commitments(comms: &[Self::Commitment], coeffs: &[E::Fr]) -> Self::Commitment {
-            use rayon::prelude::*;
             let zero = E::G1Projective::zero();
             let result = comms
-                .par_iter()
+                .iter()
                 .zip(coeffs)
-                .with_min_len(4)
-                .with_max_len(4)
                 .map(|(comm, coeff)| comm.0.mul(*coeff))
-                .reduce(|| zero, |mut a, b| {a += &b; a});
+                .fold(zero, |mut a, b| {a += &b; a});
             Commitment(result.into())
         }
     }
