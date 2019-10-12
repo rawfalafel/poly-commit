@@ -460,6 +460,8 @@ where
         let max_degree = vk.max_degree();
         let combined_c_q_e: Result<Vec<_>, Self::Error> = query_to_labels_map
             .into_par_iter()
+            .with_min_len(1)
+            .with_max_len(1)
             .map(|(query, labels)| {
                 let lc_time =
                     start_timer!(|| format!("Randomly combining {} commitments", labels.len()));
