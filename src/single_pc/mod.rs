@@ -2,6 +2,10 @@ use crate::*;
 use algebra::Field;
 use rand::RngCore;
 
+/// Generate R1CS constraints for a `SinglePolynomialCommitment` verifier.
+#[cfg(feature = "r1cs")]
+pub mod constraints;
+
 /// Describes the interface for a polynomial commitment scheme that allows
 /// a sender to commit to a single polynomial and later provide a succinct proof
 /// of evaluation for that commitment.
