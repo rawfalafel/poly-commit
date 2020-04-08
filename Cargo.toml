@@ -20,16 +20,16 @@ license = "MIT/Apache-2.0"
 edition = "2018"
 
 [dependencies]
-algebra-core = { git = "https://github.com/scipr-lab/zexe/", default-features = false }
-ff-fft = { git = "https://github.com/scipr-lab/zexe/", default-features = false }
-bench-utils = { git = "https://github.com/scipr-lab/zexe/" }
+algebra-core = { git = "https://github.com/scipr-lab/zexe", rev = "4274843a", default-features = false }
+ff-fft = { git = "https://github.com/scipr-lab/zexe", rev = "4274843a", default-features = false }
+bench-utils = { git = "https://github.com/scipr-lab/zexe", rev = "4274843a" }
 rand_core = { version = "0.5", default-features = false }
 rayon = { version = "1", optional = true }
 derivative = { version = "2", features = [ "use_core" ] }
 
 [dev-dependencies]
 rand = { version = "0.7", default-features = false }
-algebra = { git = "https://github.com/scipr-lab/zexe/", default-features = false, features = ["full"] }
+algebra = { git = "https://github.com/scipr-lab/zexe/", rev = "4274843a", default-features = false, features = ["full"] }
 
 [profile.release]
 opt-level = 3
