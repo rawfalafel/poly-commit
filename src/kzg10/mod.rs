@@ -254,7 +254,7 @@ impl<E: PairingEngine> KZG10<E> {
     }
 
     /// On input a polynomial `p` and a point `point`, outputs a proof for the same.
-    pub(crate) fn open<'a>(
+    pub fn open<'a>(
         powers: &Powers<E>,
         p: &Polynomial<E::Fr>,
         point: E::Fr,
