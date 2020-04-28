@@ -617,13 +617,13 @@ mod tests {
     use crate::sonic_kzg10::SonicKZG10;
     use algebra::Bls12_377;
     use algebra::Bls12_381;
-    use algebra::MNT6;
+    use algebra::MNT6_298;
     use algebra::SW6;
 
     type PC<E> = SonicKZG10<E>;
     type PC_Bls12_377 = PC<Bls12_377>;
     type PC_Bls12_381 = PC<Bls12_381>;
-    type PC_MNT6 = PC<MNT6>;
+    type PC_MNT6 = PC<MNT6_298>;
     type PC_SW6 = PC<SW6>;
 
     #[test]
